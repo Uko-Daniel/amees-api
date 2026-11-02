@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# env — NEVER commit this
+.env
+.env.local
+.env.*.local
+
+# Prisma generated client (regenerated on install)
+generated/
+prisma/generated/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

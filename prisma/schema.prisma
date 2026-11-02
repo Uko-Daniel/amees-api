@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("editor")
+  createdAt    DateTime @default(now())
+
+  devices TrustedDevice[]
+  otps    LoginOtp[]
+}
+
+model TrustedDevice {
+  id         String   @id @default(uuid())
+  adminId    String
+  admin      Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  deviceId   String
+  label      String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@unique([adminId, deviceId])
+  @@index([adminId])
+}
+
+model LoginOtp {
+  id         String    @id @default(uuid())
+  adminId    String
+  admin      Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  codeHash   String
+  deviceId   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+
+  @@index([adminId, createdAt])
+}
+
+model FeaturedEvent {
+  id               String   @id @default(uuid())
+  title            String
+  version          String
+  pre              String
+  theme            String
+  subtitle         String
+  venue            String
+  start            DateTime
+  end              DateTime
+  sessionHours     String
+  demoNote         String
+  registrationOpen Boolean  @default(true)
+  isActive         Boolean  @default(true)
+  tracks           Json
+  steps            Json
+}
+
+model WeeklyRhythm {
+  id      String  @id @default(uuid())
+  title   String
+  text    String
+  weekday Int?
+  label   String?
+}
+
+model CalendarEntry {
+  id    String   @id @default(uuid())
+  date  DateTime
+  title String
+  type  String   @default("special")
+}
+
+model Executive {
+  id       String  @id @default(uuid())
+  role     String
+  name     String
+  photoUrl String?
+  linkedin String?
+  order    Int     @default(0)
+}
+
+model Project {
+  id            String   @id @default(uuid())
+  title         String
+  builder       String
+  description   String
+  tags          String[]
+  stage         String
+  showcased     Boolean  @default(false)
+  workbenchData Json
+}
+
+model SponsorTier {
+  id       String   @id @default(uuid())
+  name     String
+  price    String
+  features String[]
+  hot      Boolean  @default(false)
+}
+
+model Partner {
+  id         String   @id @default(uuid())
+  name       String
+  type       String   @default("Partner") // "Sponsor" | "Partner"
+  tier       String?                       // matches SponsorTier.name when set
+  logoUrl    String?
+  websiteUrl String?
+  order      Int      @default(0)
+  active     Boolean  @default(true)
+
+  @@index([active, order])
+}
+
+model SiteSettings {
+  id            String @id @default("global")
+  activeMarquee String @default("caution")
+  pages         Json
+  about         Json
+  footer        Json
+  quickLinks    Json
+  upcoming      Json
+  archive       Json
+  opportunities Json
+  exhibition    Json
+  sponsorPitch  Json
+
+  membershipFormUrl    String @default("")
+  projectSubmissionUrl String @default("")
+
+  eventRegistrationFormUrl      String @default("")
+  eventRegistrationEventFieldId String @default("")
+}
+
+model SponsorEnquiry {
+  id        String   @id @default(cuid())
+  org       String
+  name      String
+  email     String
+  tier      String
+  msg       String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model ArchiveFile {
+  id         String   @id @default(uuid())
+  title      String
+  course     String
+  level      Int
+  kind       String   // "PDF" | "DOCX" | "PPTX" | "XLSX"
+  year       Int
+  fileUrl    String?
+  fileKey    String?
+  sizeBytes  Int      @default(0)
+  sample     Boolean  @default(false)
+  uploadedAt DateTime @default(now())
+
+  @@index([year, course, level])
+}
