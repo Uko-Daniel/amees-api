@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { publicRouter } from './routes/public.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuthRouter } from './routes/adminAuth.js';
+import { archiveFilesRouter } from './routes/archiveFiles.js';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api', publicRouter);
 app.use('/api/admin/auth', adminAuthRouter);
+app.use('/api/admin/archive-files', archiveFilesRouter);
 app.use('/api/admin', adminRouter);
 
 // Catch-all 404
