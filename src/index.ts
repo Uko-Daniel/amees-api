@@ -23,6 +23,10 @@ app.use(cors({
   credentials: false, // using Bearer tokens, not cookies
 }));
 
+
+app.use(express.json());
+
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
 });
