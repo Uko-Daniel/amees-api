@@ -368,3 +368,26 @@ adminRouter.post('/students/bulk', async (req, res) => {
     res.status(500).json({ error: 'Failed to process CSV' });
   }
 });
+
+adminRouter.get('/students', async (req, res) => {
+  try {
+    const query = req.query.q ? String(req.query.q) : '';
+    
+    const students = await prisma.student.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { matric: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50 // Limit to 50 results for speed
+    });
+    
+    res.json(students);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to load students' });
+  }
+});
