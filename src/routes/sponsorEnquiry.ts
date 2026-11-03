@@ -1,5 +1,6 @@
 import { Router, type Request } from 'express';
 import { Resend } from 'resend';
+import { buildSponsorEnquiryTemplate } from '../lib/emailTemplates.js';
 
 export const sponsorEnquiryRouter = Router();
 
@@ -12,11 +13,6 @@ const LIMITS = { org: 120, name: 120, email: 254, tier: 60, msg: 4000 } as const
 
 const str = (v: unknown, max: number) =>
   typeof v === 'string' ? v.trim().slice(0, max) : '';
-
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
-  );
 
 // Lazy singleton: dotenv.config() in index.ts runs after imports, so read env
 // on first use. Throws a clear error if the key is missing.
@@ -86,18 +82,6 @@ sponsorEnquiryRouter.post('/', async (req, res) => {
     `— Sent from the AMEES sponsor enquiry form (${ip})`,
   ].join('\n');
 
-  const html = `
-    <h2 style="margin:0 0 16px;font:600 18px system-ui,sans-serif">New sponsor enquiry</h2>
-    <table cellpadding="6" style="border-collapse:collapse;font:14px system-ui,sans-serif">
-      <tr><td><strong>Organisation</strong></td><td>${esc(org)}</td></tr>
-      <tr><td><strong>Contact name</strong></td><td>${esc(name)}</td></tr>
-      <tr><td><strong>Reply-to</strong></td><td><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>
-      <tr><td><strong>Tier of interest</strong></td><td>${esc(tier)}</td></tr>
-    </table>
-    <h3 style="margin:20px 0 8px;font:600 14px system-ui,sans-serif">Message</h3>
-    <p style="white-space:pre-wrap;font:14px system-ui,sans-serif;margin:0">${esc(msg) || '<em>(none)</em>'}</p>
-  `;
-
   // If the key is absent in dev, log and pretend success so you can still
   // exercise the form. In prod this is a hard failure.
   if (!process.env.RESEND_API_KEY) {
@@ -118,7 +102,7 @@ sponsorEnquiryRouter.post('/', async (req, res) => {
         replyTo: `${name} <${email}>`,
         subject,
         text,
-        html,
+        html: buildSponsorEnquiryTemplate(org, name, email, tier, msg, ip),
     },
     {
         idempotencyKey: `sponsor-enquiry/${ip}/${Date.now()}`,
