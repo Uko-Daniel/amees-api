@@ -1,6 +1,6 @@
 // src/lib/emailTemplates.ts
 
-const LOGO_URL = 'https://www.amees.com.ng/logo-email.png';
+const LOGO_URL = 'https://www.amees.com.ng/logo-email.svg'; // <-- Updated to .svg
 const BRAND_COLOR = '#0a0a0a'; // AMEES dark theme color
 const ACCENT_COLOR = '#2563eb'; // Replace with your actual brand blue/green
 
