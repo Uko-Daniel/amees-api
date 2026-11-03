@@ -195,3 +195,41 @@ adminRouter.delete('/opportunities/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete opportunity' });
   }
 });
+
+// 10. Student Management (Manual & Bulk)
+adminRouter.post('/students', async (req, res) => {
+  try {
+    const { name, matric, email, level } = req.body;
+    if (!name || !matric || !email) return res.status(400).json({ error: 'Name, matric, email required' });
+    
+    const student = await prisma.student.create({
+      data: { name, matric, email, level: Number(level) || 100 }
+    });
+    res.status(201).json(student);
+  } catch (error: any) {
+    if (error.code === 'P2002') return res.status(400).json({ error: 'Matric or Email already exists' });
+    res.status(500).json({ error: 'Failed to add student' });
+  }
+});
+
+adminRouter.post('/students/bulk', async (req, res) => {
+  try {
+    const { csv } = req.body; // raw CSV string
+    // Expecting format: Name, Matric, Email, Level
+    const lines = csv.split('\n').filter((l: string) => l.trim().length > 0);
+    const studentsData = lines.map((line: string) => {
+      const [name, matric, email, level] = line.split(',').map((s: string) => s.trim());
+      return { name, matric, email, level: Number(level) || 100 };
+    });
+
+    const result = await prisma.student.createMany({
+      data: studentsData,
+      skipDuplicates: true
+    });
+
+    res.json({ message: `Successfully added ${result.count} students.`, count: result.count });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to process CSV' });
+  }
+});

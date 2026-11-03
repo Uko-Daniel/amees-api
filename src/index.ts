@@ -8,6 +8,8 @@ import { publicRouter } from './routes/public.js';
 import { adminRouter } from './routes/admin.js';
 import { adminAuthRouter } from './routes/adminAuth.js';
 import { archiveFilesRouter } from './routes/archiveFiles.js';
+import { studentAuthRouter } from './routes/studentAuth.js';       
+import { studentWorkbenchRouter } from './routes/studentWorkbench.js'; 
 
 dotenv.config();
 
@@ -21,12 +23,10 @@ const allowedOrigins = [
   'http://localhost:5173',
 ];
 
-// Attach Socket.IO to the HTTP server
 const io = new Server(httpServer, {
   cors: { origin: allowedOrigins, methods: ['GET', 'POST'] }
 });
 
-// Make `io` available in your routes via `req.app.get('io')`
 app.set('io', io);
 
 app.use(cors({ origin: allowedOrigins, credentials: false }));
@@ -38,6 +38,10 @@ app.use('/api', publicRouter);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin/archive-files', archiveFilesRouter);
 app.use('/api/admin', adminRouter);
+
+// Mount Student Routes
+app.use('/api/student/auth', studentAuthRouter);
+app.use('/api/student/workbench', studentWorkbenchRouter);
 
 app.use((req, res) => res.status(404).json({ error: 'API route not found' }));
 app.use((err: any, req: any, res: any, next: any) => {
