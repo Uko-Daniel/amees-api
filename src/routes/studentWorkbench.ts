@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 export const studentWorkbenchRouter = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
+// Middleware to authenticate student
 studentWorkbenchRouter.use((req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
@@ -17,75 +18,78 @@ studentWorkbenchRouter.use((req, res, next) => {
   }
 });
 
-// GET /api/student/workbench
+// GET /api/student/workbench (Fetch ALL projects for this student)
 studentWorkbenchRouter.get('/', async (req, res) => {
   const studentId = (req as any).studentId;
   try {
     const student = await prisma.student.findUnique({ where: { id: studentId } });
     if (!student) return res.status(404).json({ error: 'Student not found' });
-    
-    // Find the project where this student is a member, include all members
-    const membership = await prisma.projectMember.findFirst({
+
+    const memberships = await prisma.projectMember.findMany({
       where: { studentId },
       include: { 
         project: {
           include: {
-            members: {
-              include: { student: true }
-            }
+            members: { include: { student: true } }
           }
         } 
       }
     });
 
-    const project = membership?.project || null;
-    res.json({ student, project });
+    // Map the memberships to return a clean list of projects with their role
+    const projects = memberships.map(m => ({
+      ...m.project,
+      myRole: m.role,
+      members: m.project.members
+    }));
+
+    res.json({ student, projects });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to load workbench' });
   }
 });
 
-// POST /api/student/workbench (Auto-save & Team Sync)
+// POST /api/student/workbench (Auto-save & Create)
 studentWorkbenchRouter.post('/', async (req, res) => {
   const studentId = (req as any).studentId;
-  const { project } = req.body;
+  const { project, studentName } = req.body;
+  
+  // The frontend sends the raw project data, but we wrap it in workbenchData
+  const wbData = project;
 
   try {
-    const existingMembership = await prisma.projectMember.findFirst({
-      where: { studentId },
-      include: { project: true }
-    });
-
-    if (existingMembership) {
-      // 1. Update the project details
+    if (project.id) {
+      // 1. UPDATE EXISTING PROJECT
       const updated = await prisma.project.update({
-        where: { id: existingMembership.projectId },
+        where: { id: project.id },
         data: {
-          title: project.name,
-          description: project.goal,
-          stage: String(project.stage),
-          builder: project.builderString || 'Unknown', // We pass a flat string from frontend for the showcase card
-          workbenchData: project 
+          title: wbData.name,
+          description: wbData.goal,
+          stage: String(wbData.stage),
+          builder: studentName || 'Unknown',
+          workbenchData: wbData 
         }
       });
 
-      // 2. Sync Team Members (If the frontend sent a members array)
-      if (project.members && Array.isArray(project.members)) {
-        // Get current DB members
+      // Sync team members
+      if (wbData.members && Array.isArray(wbData.members)) {
         const currentDbMembers = await prisma.projectMember.findMany({
           where: { projectId: updated.id }
         });
 
-        const frontendMemberIds = project.members.map((m: any) => m.studentId);
+        const frontendMemberIds = wbData.members.map((m: any) => m.studentId);
         
         // Remove members that the lead deleted
         const membersToRemove = currentDbMembers.filter(m => !frontendMemberIds.includes(m.studentId) && m.role !== 'Lead');
-        await prisma.projectMember.deleteMany({
-          where: { id: { in: membersToRemove.map(m => m.id) } }
-        });
+        if (membersToRemove.length > 0) {
+          await prisma.projectMember.deleteMany({
+            where: { id: { in: membersToRemove.map(m => m.id) } }
+          });
+        }
 
         // Add or update current members
-        for (const m of project.members) {
+        for (const m of wbData.members) {
           await prisma.projectMember.upsert({
             where: { projectId_studentId: { projectId: updated.id, studentId: m.studentId } },
             update: { role: m.role },
@@ -96,16 +100,16 @@ studentWorkbenchRouter.post('/', async (req, res) => {
 
       return res.json(updated);
     } else {
-      // Create new Project (student is the Lead)
+      // 2. CREATE NEW PROJECT
       const created = await prisma.project.create({
         data: {
-          title: project.name,
-          builder: project.builderString || 'Unknown',
-          description: project.goal,
-          tags: [project.category || 'Other'],
-          stage: String(project.stage),
+          title: wbData.name,
+          builder: studentName || 'Unknown',
+          description: wbData.goal,
+          tags: [wbData.category || 'Other'],
+          stage: String(wbData.stage),
           showcased: false,
-          workbenchData: project,
+          workbenchData: wbData,
           members: {
             create: { studentId: studentId, role: 'Lead' }
           }
@@ -119,17 +123,44 @@ studentWorkbenchRouter.post('/', async (req, res) => {
   }
 });
 
+// DELETE /api/student/workbench/:id (Delete project or leave team)
+studentWorkbenchRouter.delete('/:id', async (req, res) => {
+  const studentId = (req as any).studentId;
+  const projectId = req.params.id;
+
+  try {
+    const membership = await prisma.projectMember.findUnique({
+      where: { projectId_studentId: { projectId, studentId } }
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'Project not found or you are not a member' });
+    }
+
+    if (membership.role === 'Lead') {
+      // If Lead, delete the entire project and cascade members
+      await prisma.project.delete({ where: { id: projectId } });
+    } else {
+      // If Member, just remove them from the team
+      await prisma.projectMember.delete({ where: { id: membership.id } });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
 // POST /api/student/workbench/join (Accept an invite link)
 studentWorkbenchRouter.post('/join', async (req, res) => {
   const studentId = (req as any).studentId;
   const { projectId } = req.body;
 
   try {
-    // Check if project exists
     const project = await prisma.project.findUnique({ where: { id: projectId } });
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    // Check if already a member
     const existing = await prisma.projectMember.findUnique({
       where: { projectId_studentId: { projectId, studentId } }
     });
@@ -138,7 +169,6 @@ studentWorkbenchRouter.post('/join', async (req, res) => {
       return res.json({ message: 'Already a member', projectId });
     }
 
-    // Add to project
     await prisma.projectMember.create({
       data: { projectId, studentId, role: 'Member' }
     });
@@ -149,6 +179,7 @@ studentWorkbenchRouter.post('/join', async (req, res) => {
   }
 });
 
+// GET /api/student/workbench/high-score
 studentWorkbenchRouter.get('/high-score', async (req, res) => {
   const studentId = (req as any).studentId;
   try {
@@ -162,6 +193,7 @@ studentWorkbenchRouter.get('/high-score', async (req, res) => {
   }
 });
 
+// POST /api/student/workbench/high-score
 studentWorkbenchRouter.post('/high-score', async (req, res) => {
   const studentId = (req as any).studentId;
   const { score } = req.body;
