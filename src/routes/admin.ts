@@ -7,6 +7,12 @@ export const adminRouter = Router();
 // Every route below requires a valid JWT
 adminRouter.use(requireAuth);
 
+// Helper to trigger a real-time update for all visitors
+const broadcast = (req: any) => {
+  const io = req.app.get('io');
+  if (io) io.emit('content-updated');
+};
+
 // 2. Update Featured Event
 adminRouter.put('/event', async (req, res) => {
   try {
@@ -17,6 +23,7 @@ adminRouter.put('/event', async (req, res) => {
       where: { id: existing.id },
       data: req.body,
     });
+    broadcast(req);
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update event' });
@@ -30,6 +37,7 @@ adminRouter.put('/settings', async (req, res) => {
       where: { id: 'global' },
       data: req.body,
     });
+    broadcast(req);
     res.json(updated);
   } catch (error) {
     console.error(error);
@@ -44,6 +52,7 @@ adminRouter.post('/calendar', async (req, res) => {
     const newEntry = await prisma.calendarEntry.create({
       data: { date: new Date(`${day}T12:00:00+01:00`), title, type: type || 'special' },
     });
+    broadcast(req);
     res.json(newEntry);
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
@@ -53,6 +62,7 @@ adminRouter.post('/calendar', async (req, res) => {
 adminRouter.delete('/calendar/:id', async (req, res) => {
   try {
     await prisma.calendarEntry.delete({ where: { id: req.params.id } });
+    broadcast(req);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
@@ -63,6 +73,7 @@ adminRouter.delete('/calendar/:id', async (req, res) => {
 adminRouter.post('/weekly', async (req, res) => {
   try {
     const newItem = await prisma.weeklyRhythm.create({ data: req.body });
+    broadcast(req);
     res.json(newItem);
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
@@ -72,6 +83,7 @@ adminRouter.post('/weekly', async (req, res) => {
 adminRouter.delete('/weekly/:id', async (req, res) => {
   try {
     await prisma.weeklyRhythm.delete({ where: { id: req.params.id } });
+    broadcast(req);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
@@ -82,6 +94,7 @@ adminRouter.delete('/weekly/:id', async (req, res) => {
 adminRouter.post('/executives', async (req, res) => {
   try {
     const newExec = await prisma.executive.create({ data: req.body });
+    broadcast(req);
     res.json(newExec);
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
@@ -91,6 +104,7 @@ adminRouter.post('/executives', async (req, res) => {
 adminRouter.delete('/executives/:id', async (req, res) => {
   try {
     await prisma.executive.delete({ where: { id: req.params.id } });
+    broadcast(req);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
@@ -107,6 +121,7 @@ adminRouter.put('/projects/:id/toggle', async (req, res) => {
       where: { id: project.id },
       data: { showcased: !project.showcased },
     });
+    broadcast(req);
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed' });
@@ -141,6 +156,7 @@ adminRouter.post('/partners', async (req, res) => {
         active: active !== false,
       },
     });
+    broadcast(req);
     res.status(201).json(created);
   } catch (error) {
     console.error('partner create failed', error);
@@ -151,8 +167,31 @@ adminRouter.post('/partners', async (req, res) => {
 adminRouter.delete('/partners/:id', async (req, res) => {
   try {
     await prisma.partner.delete({ where: { id: req.params.id } });
+    broadcast(req);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete partner' });
+  }
+});
+
+// 9. Opportunities CRUD
+adminRouter.post('/opportunities', async (req, res) => {
+  try {
+    const created = await prisma.opportunity.create({ data: req.body });
+    broadcast(req);
+    res.status(201).json(created);
+  } catch (error) {
+    console.error('opportunity create failed', error);
+    res.status(500).json({ error: 'Failed to add opportunity' });
+  }
+});
+
+adminRouter.delete('/opportunities/:id', async (req, res) => {
+  try {
+    await prisma.opportunity.delete({ where: { id: req.params.id } });
+    broadcast(req);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete opportunity' });
   }
 });

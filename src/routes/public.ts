@@ -6,6 +6,9 @@ export const publicRouter = Router();
 
 publicRouter.use('/sponsor-enquiry', sponsorEnquiryRouter);
 
+// Helper for impact stats (e.g., 17 -> 20+)
+const roundUpToTen = (num: number) => num === 0 ? '0+' : `${Math.ceil(num / 10) * 10}+`;
+
 // ---------------------------------------------------------------- search
 publicRouter.get('/search', async (req, res) => {
   const q = String(req.query.q ?? '').trim();
@@ -24,15 +27,8 @@ publicRouter.get('/search', async (req, res) => {
           ],
         },
         take: 10,
-        select: {
-          id: true,
-          title: true,
-          builder: true,
-          description: true,
-          showcased: true,
-        },
+        select: { id: true, title: true, builder: true, description: true, showcased: true },
       }),
-
       prisma.archiveFile.findMany({
         where: {
           OR: [
@@ -41,25 +37,13 @@ publicRouter.get('/search', async (req, res) => {
           ],
         },
         take: 10,
-        select: {
-          id: true,
-          title: true,
-          course: true,
-          level: true,
-          year: true,
-          kind: true,
-          fileUrl: true,
-        },
+        select: { id: true, title: true, course: true, level: true, year: true, kind: true, fileUrl: true },
       }),
-
       prisma.calendarEntry.findMany({
-        where: {
-          title: { contains: term, mode: 'insensitive' },
-        },
+        where: { title: { contains: term, mode: 'insensitive' } },
         take: 5,
         select: { id: true, title: true, date: true, type: true },
       }),
-
       prisma.sponsorTier.findMany({
         where: {
           OR: [
@@ -135,6 +119,11 @@ publicRouter.get('/content', async (_req, res) => {
     const archiveFiles = await prisma.archiveFile.findMany({
       orderBy: [{ year: 'desc' }, { uploadedAt: 'desc' }],
     });
+    
+    // New Queries for Phase 1
+    const opportunities = await prisma.opportunity.findMany({ orderBy: { endDate: 'asc' } });
+    const studentCount = await prisma.student.count();
+    const showcasedCount = await prisma.project.count({ where: { showcased: true } });
 
     if (!settings) throw new Error('Site settings not found in database');
 
@@ -166,16 +155,21 @@ publicRouter.get('/content', async (_req, res) => {
       archiveFiles,
       quickLinks: settings.quickLinks,
       upcoming: settings.upcoming,
-      opportunities: settings.opportunities,
+      opportunities, // Real DB opportunities
       footer: settings.footer,
       pages: settings.pages,
-      sponsorPitch:
-        settings.sponsorPitch || { title: 'Partner with AMEES', text: '', cta: '' },
+      sponsorPitch: settings.sponsorPitch || { title: 'Partner with AMEES', text: '', cta: '' },
 
       membershipFormUrl: settings.membershipFormUrl ?? '',
       projectSubmissionUrl: settings.projectSubmissionUrl ?? '',
       eventRegistrationFormUrl: settings.eventRegistrationFormUrl ?? '',
       eventRegistrationEventFieldId: settings.eventRegistrationEventFieldId ?? '',
+
+      // Impact Stats
+      impact: {
+        members: roundUpToTen(studentCount || 150),
+        projects: roundUpToTen(showcasedCount || 24),
+      },
 
       calendarMilestones: [],
       calendarNote: '',

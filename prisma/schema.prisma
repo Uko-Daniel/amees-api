@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
   moduleFormat = "esm"
 }
 
@@ -109,14 +109,14 @@ model SponsorTier {
 }
 
 model Partner {
-  id         String   @id @default(uuid())
+  id         String  @id @default(uuid())
   name       String
-  type       String   @default("Partner") // "Sponsor" | "Partner"
-  tier       String?                       // matches SponsorTier.name when set
+  type       String  @default("Partner") // "Sponsor" | "Partner"
+  tier       String? // matches SponsorTier.name when set
   logoUrl    String?
   websiteUrl String?
-  order      Int      @default(0)
-  active     Boolean  @default(true)
+  order      Int     @default(0)
+  active     Boolean @default(true)
 
   @@index([active, order])
 }
@@ -159,7 +159,7 @@ model ArchiveFile {
   title      String
   course     String
   level      Int
-  kind       String   // "PDF" | "DOCX" | "PPTX" | "XLSX"
+  kind       String // "PDF" | "DOCX" | "PPTX" | "XLSX"
   year       Int
   fileUrl    String?
   fileKey    String?
@@ -168,4 +168,41 @@ model ArchiveFile {
   uploadedAt DateTime @default(now())
 
   @@index([year, course, level])
+}
+
+model Student {
+  id        String   @id @default(uuid())
+  name      String
+  matric    String   @unique
+  level     Int
+  email     String
+  createdAt DateTime @default(now())
+
+  // Add this line to link back to SavedOpportunity
+  savedOpportunities SavedOpportunity[]
+}
+
+model Opportunity {
+  id           String   @id @default(uuid())
+  name         String
+  type         String // "IT", "Scholarship", "Competition", "Excursion"
+  externalLink String?
+  description  String
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime @default(now())
+
+  // Add this line to link back to SavedOpportunity
+  savedBy SavedOpportunity[]
+}
+
+model SavedOpportunity {
+  id            String      @id @default(uuid())
+  studentId     String
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  savedAt       DateTime    @default(now())
+
+  @@unique([studentId, opportunityId])
 }
