@@ -148,3 +148,36 @@ studentWorkbenchRouter.post('/join', async (req, res) => {
     res.status(500).json({ error: 'Failed to join project' });
   }
 });
+
+studentWorkbenchRouter.get('/high-score', async (req, res) => {
+  const studentId = (req as any).studentId;
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { runnerHighScore: true }
+    });
+    res.json({ score: student?.runnerHighScore || 0 });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load score' });
+  }
+});
+
+studentWorkbenchRouter.post('/high-score', async (req, res) => {
+  const studentId = (req as any).studentId;
+  const { score } = req.body;
+
+  if (typeof score !== 'number') return res.status(400).json({ error: 'Invalid score' });
+
+  try {
+    const student = await prisma.student.findUnique({ where: { id: studentId } });
+    if (student && score > student.runnerHighScore) {
+      await prisma.student.update({
+        where: { id: studentId },
+        data: { runnerHighScore: score }
+      });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save score' });
+  }
+});

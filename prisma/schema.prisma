@@ -168,6 +168,8 @@ model Student {
   level     Int      @default(100)
   createdAt DateTime @default(now())
 
+  runnerHighScore Int @default(0)
+
   savedOpportunities SavedOpportunity[]
   projectMemberships ProjectMember[]
   otps               StudentLoginOtp[]

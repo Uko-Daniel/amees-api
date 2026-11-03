@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma.js';
 import { hashPassword, hashOtp, safeCompare, verifyPassword } from '../lib/password.js';
 import { issueAdminToken } from '../lib/jwt.js';
 import { requireAuth } from '../middleware/requireAuth.js';
+import { buildOtpTemplate } from '../lib/emailTemplates.js';
 
 export const adminAuthRouter = Router();
 
@@ -64,14 +65,7 @@ async function sendOtpEmail(email: string, code: string) {
     to: [email],
     subject: `Your AMEES admin code: ${code}`,
     text: `Your AMEES admin verification code is:\n\n  ${code}\n\nIt expires in 10 minutes. If you did not try to log in, change your password immediately.`,
-    html: `
-      <div style="font:14px system-ui,sans-serif;max-width:480px">
-        <h2 style="margin:0 0 12px">AMEES admin verification</h2>
-        <p style="margin:0 0 16px">Use this code to complete your sign-in. It expires in 10 minutes.</p>
-        <p style="font:600 28px monospace;letter-spacing:4px;background:#f4f4f4;padding:14px 18px;display:inline-block;border-radius:4px;margin:0 0 16px">${code}</p>
-        <p style="margin:0;color:#666;font-size:12px">If you didn't try to log in, change your password now.</p>
-      </div>
-    `,
+    html: buildOtpTemplate(code),
   });
   if (error) throw new Error(`OTP email failed: ${error.message}`);
 }
