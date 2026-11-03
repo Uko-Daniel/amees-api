@@ -74,10 +74,11 @@ model WeeklyRhythm {
 }
 
 model CalendarEntry {
-  id    String   @id @default(uuid())
-  date  DateTime
-  title String
-  type  String   @default("special")
+  id          String   @id @default(uuid())
+  date        DateTime
+  title       String
+  description String?
+  type        String   @default("special")
 }
 
 model Executive {

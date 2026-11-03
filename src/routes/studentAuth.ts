@@ -10,6 +10,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 // Initialize Resend (uses the same API key as your admin/sponsor emails)
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Helper function to standardize matric numbers (uppercase, no spaces)
+const normalizeMatric = (matric: string) => {
+  return matric.trim().toUpperCase().replace(/\s+/g, '');
+};
+
 // POST /api/student/auth/identify
 studentAuthRouter.post('/identify', async (req, res) => {
   const { name, matric, email } = req.body;
@@ -18,7 +23,9 @@ studentAuthRouter.post('/identify', async (req, res) => {
   }
 
   try {
-    const student = await prisma.student.findUnique({ where: { matric } });
+    const cleanMatric = normalizeMatric(matric);
+
+    const student = await prisma.student.findUnique({ where: { matric: cleanMatric } });
     
     // SECURITY: Do not allow random people to sign up. 
     // They must be added to the DB by an admin first.
@@ -76,7 +83,7 @@ studentAuthRouter.post('/identify', async (req, res) => {
 
 // POST /api/student/auth/verify
 studentAuthRouter.post('/verify', async (req, res) => {
-  const { challengeId, code } = req.body;
+  const { challengeId, code, rememberMe } = req.body;
   
   if (!challengeId || !code) {
     return res.status(400).json({ error: 'Challenge ID and code are required' });
@@ -102,11 +109,13 @@ studentAuthRouter.post('/verify', async (req, res) => {
       data: { consumedAt: new Date() }
     });
 
-    // Generate JWT
+    // 30 days if rememberMe is true, otherwise 1 day
+    const expiresIn = rememberMe ? '30d' : '1d';
+
     const token = jwt.sign(
       { sub: otp.studentId, role: 'student', name: otp.student.name },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn }
     );
 
     res.json({ token, student: otp.student });

@@ -13,7 +13,9 @@ const broadcast = (req: any) => {
   if (io) io.emit('content-updated');
 };
 
-// 2. Update Featured Event
+// ---------------------------------------------------------
+// 1. Featured Event & Settings
+// ---------------------------------------------------------
 adminRouter.put('/event', async (req, res) => {
   try {
     const existing = await prisma.featuredEvent.findFirst({ where: { isActive: true } });
@@ -30,7 +32,6 @@ adminRouter.put('/event', async (req, res) => {
   }
 });
 
-// 3. Update Site Settings
 adminRouter.put('/settings', async (req, res) => {
   try {
     const updated = await prisma.siteSettings.update({
@@ -45,17 +46,38 @@ adminRouter.put('/settings', async (req, res) => {
   }
 });
 
-// 4. Calendar CRUD
+// ---------------------------------------------------------
+// 2. Calendar (One-off Events) CRUD
+// ---------------------------------------------------------
 adminRouter.post('/calendar', async (req, res) => {
   try {
-    const { day, title, type } = req.body;
+    const { day, title, description, type } = req.body;
     const newEntry = await prisma.calendarEntry.create({
-      data: { date: new Date(`${day}T12:00:00+01:00`), title, type: type || 'special' },
+      data: { 
+        date: new Date(`${day}T12:00:00+01:00`), 
+        title, 
+        description: description || null, 
+        type: type || 'special' 
+      },
     });
     broadcast(req);
     res.json(newEntry);
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+adminRouter.put('/calendar/:id', async (req, res) => {
+  try {
+    const { title, description, type } = req.body;
+    const updated = await prisma.calendarEntry.update({
+      where: { id: req.params.id },
+      data: { title, description, type },
+    });
+    broadcast(req);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update event' });
   }
 });
 
@@ -65,18 +87,33 @@ adminRouter.delete('/calendar/:id', async (req, res) => {
     broadcast(req);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Failed to delete event' });
   }
 });
 
-// 5. Weekly Rhythm CRUD
+// ---------------------------------------------------------
+// 3. Weekly Rhythm CRUD
+// ---------------------------------------------------------
 adminRouter.post('/weekly', async (req, res) => {
   try {
     const newItem = await prisma.weeklyRhythm.create({ data: req.body });
     broadcast(req);
     res.json(newItem);
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Failed to create weekly item' });
+  }
+});
+
+adminRouter.put('/weekly/:id', async (req, res) => {
+  try {
+    const updated = await prisma.weeklyRhythm.update({
+      where: { id: req.params.id },
+      data: req.body,
+    });
+    broadcast(req);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update weekly item' });
   }
 });
 
@@ -86,18 +123,33 @@ adminRouter.delete('/weekly/:id', async (req, res) => {
     broadcast(req);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Failed to delete weekly item' });
   }
 });
 
-// 6. Executives CRUD
+// ---------------------------------------------------------
+// 4. Executives CRUD
+// ---------------------------------------------------------
 adminRouter.post('/executives', async (req, res) => {
   try {
     const newExec = await prisma.executive.create({ data: req.body });
     broadcast(req);
     res.json(newExec);
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Failed to create executive' });
+  }
+});
+
+adminRouter.put('/executives/:id', async (req, res) => {
+  try {
+    const updated = await prisma.executive.update({
+      where: { id: req.params.id },
+      data: req.body,
+    });
+    broadcast(req);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update executive' });
   }
 });
 
@@ -107,11 +159,13 @@ adminRouter.delete('/executives/:id', async (req, res) => {
     broadcast(req);
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Failed to delete executive' });
   }
 });
 
-// 7. Toggle Project Showcase
+// ---------------------------------------------------------
+// 5. Projects (Toggle Showcase)
+// ---------------------------------------------------------
 adminRouter.put('/projects/:id/toggle', async (req, res) => {
   try {
     const project = await prisma.project.findUnique({ where: { id: req.params.id } });
@@ -124,11 +178,13 @@ adminRouter.put('/projects/:id/toggle', async (req, res) => {
     broadcast(req);
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Failed to toggle project' });
   }
 });
 
-// 8. Partners (Sponsors) CRUD
+// ---------------------------------------------------------
+// 6. Partners (Sponsors) CRUD
+// ---------------------------------------------------------
 adminRouter.get('/partners', async (_req, res) => {
   try {
     const partners = await prisma.partner.findMany({
@@ -159,8 +215,20 @@ adminRouter.post('/partners', async (req, res) => {
     broadcast(req);
     res.status(201).json(created);
   } catch (error) {
-    console.error('partner create failed', error);
     res.status(500).json({ error: 'Failed to add partner' });
+  }
+});
+
+adminRouter.put('/partners/:id', async (req, res) => {
+  try {
+    const updated = await prisma.partner.update({
+      where: { id: req.params.id },
+      data: req.body,
+    });
+    broadcast(req);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update partner' });
   }
 });
 
@@ -174,15 +242,29 @@ adminRouter.delete('/partners/:id', async (req, res) => {
   }
 });
 
-// 9. Opportunities CRUD
+// ---------------------------------------------------------
+// 7. Opportunities CRUD
+// ---------------------------------------------------------
 adminRouter.post('/opportunities', async (req, res) => {
   try {
     const created = await prisma.opportunity.create({ data: req.body });
     broadcast(req);
     res.status(201).json(created);
   } catch (error) {
-    console.error('opportunity create failed', error);
     res.status(500).json({ error: 'Failed to add opportunity' });
+  }
+});
+
+adminRouter.put('/opportunities/:id', async (req, res) => {
+  try {
+    const updated = await prisma.opportunity.update({
+      where: { id: req.params.id },
+      data: req.body,
+    });
+    broadcast(req);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update opportunity' });
   }
 });
 
@@ -196,14 +278,67 @@ adminRouter.delete('/opportunities/:id', async (req, res) => {
   }
 });
 
-// 10. Student Management (Manual & Bulk)
+// ---------------------------------------------------------
+// 8. Archive Files (Google Drive links) CRUD
+// ---------------------------------------------------------
+adminRouter.post('/archive-files', async (req, res) => {
+  try {
+    const { title, course, level, year, kind, fileUrl } = req.body;
+    const created = await prisma.archiveFile.create({
+      data: {
+        title,
+        course,
+        level: Number(level),
+        year: Number(year),
+        kind,
+        fileUrl,
+        sizeBytes: 0,
+      },
+    });
+    broadcast(req);
+    res.status(201).json(created);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add archive link' });
+  }
+});
+
+adminRouter.put('/archive-files/:id', async (req, res) => {
+  try {
+    const { title, course, level, year, kind } = req.body;
+    const updated = await prisma.archiveFile.update({
+      where: { id: req.params.id },
+      data: { title, course, level: Number(level), year: Number(year), kind },
+    });
+    broadcast(req);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update archive link' });
+  }
+});
+
+adminRouter.delete('/archive-files/:id', async (req, res) => {
+  try {
+    await prisma.archiveFile.delete({ where: { id: req.params.id } });
+    broadcast(req);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete archive link' });
+  }
+});
+
+// ---------------------------------------------------------
+// 9. Students CRUD (Manual & Bulk)
+// ---------------------------------------------------------
 adminRouter.post('/students', async (req, res) => {
   try {
     const { name, matric, email, level } = req.body;
     if (!name || !matric || !email) return res.status(400).json({ error: 'Name, matric, email required' });
     
+    // Normalize matric number
+    const cleanMatric = matric.trim().toUpperCase().replace(/\s+/g, '');
+
     const student = await prisma.student.create({
-      data: { name, matric, email, level: Number(level) || 100 }
+      data: { name, matric: cleanMatric, email, level: Number(level) || 100 }
     });
     res.status(201).json(student);
   } catch (error: any) {
@@ -214,12 +349,12 @@ adminRouter.post('/students', async (req, res) => {
 
 adminRouter.post('/students/bulk', async (req, res) => {
   try {
-    const { csv } = req.body; // raw CSV string
-    // Expecting format: Name, Matric, Email, Level
+    const { csv } = req.body;
     const lines = csv.split('\n').filter((l: string) => l.trim().length > 0);
     const studentsData = lines.map((line: string) => {
       const [name, matric, email, level] = line.split(',').map((s: string) => s.trim());
-      return { name, matric, email, level: Number(level) || 100 };
+      const cleanMatric = matric.trim().toUpperCase().replace(/\s+/g, '');
+      return { name, matric: cleanMatric, email, level: Number(level) || 100 };
     });
 
     const result = await prisma.student.createMany({
