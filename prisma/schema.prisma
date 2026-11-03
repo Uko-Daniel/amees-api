@@ -89,17 +89,6 @@ model Executive {
   order    Int     @default(0)
 }
 
-model Project {
-  id            String   @id @default(uuid())
-  title         String
-  builder       String
-  description   String
-  tags          String[]
-  stage         String
-  showcased     Boolean  @default(false)
-  workbenchData Json
-}
-
 model SponsorTier {
   id       String   @id @default(uuid())
   name     String
@@ -111,8 +100,8 @@ model SponsorTier {
 model Partner {
   id         String  @id @default(uuid())
   name       String
-  type       String  @default("Partner") // "Sponsor" | "Partner"
-  tier       String? // matches SponsorTier.name when set
+  type       String  @default("Partner")
+  tier       String?
   logoUrl    String?
   websiteUrl String?
   order      Int     @default(0)
@@ -159,7 +148,7 @@ model ArchiveFile {
   title      String
   course     String
   level      Int
-  kind       String // "PDF" | "DOCX" | "PPTX" | "XLSX"
+  kind       String
   year       Int
   fileUrl    String?
   fileKey    String?
@@ -174,25 +163,62 @@ model Student {
   id        String   @id @default(uuid())
   name      String
   matric    String   @unique
-  level     Int
-  email     String
+  email     String   @unique
+  level     Int      @default(100)
   createdAt DateTime @default(now())
 
-  // Add this line to link back to SavedOpportunity
   savedOpportunities SavedOpportunity[]
+  projectMemberships ProjectMember[]
+  otps               StudentLoginOtp[]
+}
+
+model Project {
+  id            String   @id @default(uuid())
+  title         String
+  builder       String
+  description   String
+  tags          String[]
+  stage         String
+  showcased     Boolean  @default(false)
+  workbenchData Json
+
+  // Relation to the join table (replaces the old studentId field)
+  members ProjectMember[]
+}
+
+model ProjectMember {
+  id        String @id @default(uuid())
+  projectId String
+  studentId String
+  role      String @default("Member")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, studentId])
+}
+
+model StudentLoginOtp {
+  id         String    @id @default(uuid())
+  studentId  String
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
 }
 
 model Opportunity {
   id           String   @id @default(uuid())
   name         String
-  type         String // "IT", "Scholarship", "Competition", "Excursion"
+  type         String
   externalLink String?
   description  String
   startDate    DateTime
   endDate      DateTime
+  tags         String[] @default([]) // Added tags
   createdAt    DateTime @default(now())
 
-  // Add this line to link back to SavedOpportunity
   savedBy SavedOpportunity[]
 }
 
