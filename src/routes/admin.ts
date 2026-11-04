@@ -51,32 +51,59 @@ adminRouter.put('/settings', async (req, res) => {
 // ---------------------------------------------------------
 adminRouter.post('/calendar', async (req, res) => {
   try {
-    const { day, title, description, type } = req.body;
+    const { day, title, description, type, startTime, endTime, joinUrl, registrationUrl } = req.body;
+    
+    // Combine day and times into full Date objects
+    const startStr = `${day}T${startTime || '12:00'}:00+01:00`;
+    const endStr = `${day}T${endTime || '14:00'}:00+01:00`;
+
     const newEntry = await prisma.calendarEntry.create({
       data: { 
-        date: new Date(`${day}T12:00:00+01:00`), 
+        date: new Date(startStr), 
+        endDate: new Date(endStr),
         title, 
         description: description || null, 
-        type: type || 'special' 
+        type: type || 'special',
+        joinUrl: joinUrl || null,
+        registrationUrl: registrationUrl || null
       },
     });
     broadcast(req);
     res.json(newEntry);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to create event' });
   }
 });
 
 adminRouter.put('/calendar/:id', async (req, res) => {
   try {
-    const { title, description, type } = req.body;
+    const { day, title, description, type, startTime, endTime, joinUrl, registrationUrl } = req.body;
+    
+    // Fetch existing to get the day if not provided
+    const existing = await prisma.calendarEntry.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+
+    const dateStr = day || existing.date.toISOString().split('T')[0];
+    const startStr = `${dateStr}T${startTime || '12:00'}:00+01:00`;
+    const endStr = `${dateStr}T${endTime || '14:00'}:00+01:00`;
+
     const updated = await prisma.calendarEntry.update({
       where: { id: req.params.id },
-      data: { title, description, type },
+      data: { 
+        date: new Date(startStr),
+        endDate: new Date(endStr),
+        title, 
+        description, 
+        type,
+        joinUrl: joinUrl || null,
+        registrationUrl: registrationUrl || null
+      },
     });
     broadcast(req);
     res.json(updated);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to update event' });
   }
 });

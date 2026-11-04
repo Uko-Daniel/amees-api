@@ -9,6 +9,12 @@ publicRouter.use('/sponsor-enquiry', sponsorEnquiryRouter);
 // Helper for impact stats (e.g., 17 -> 20+)
 const roundUpToTen = (num: number) => num === 0 ? '0+' : `${Math.ceil(num / 10) * 10}+`;
 
+// Helper to extract HH:MM from a Date object
+const extractTime = (date: Date | null) => {
+  if (!date) return null;
+  return date.toISOString().split('T')[1].slice(0, 5); // e.g. "15:00"
+};
+
 // ---------------------------------------------------------------- search
 publicRouter.get('/search', async (req, res) => {
   const q = String(req.query.q ?? '').trim();
@@ -139,6 +145,9 @@ publicRouter.get('/content', async (_req, res) => {
       calendarEntries: calendarEntries.map((c) => ({
         ...c,
         day: c.date.toISOString().split('T')[0],
+        startTime: extractTime(c.date),
+        endTime: extractTime(c.endDate),
+        endDate: c.endDate ? c.endDate.toISOString() : null,
       })),
       projects: {
         ...(settings.exhibition as any),

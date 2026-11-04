@@ -63,6 +63,9 @@ model FeaturedEvent {
   isActive         Boolean  @default(true)
   tracks           Json
   steps            Json
+
+  joinUrl         String?
+  registrationUrl String?
 }
 
 model WeeklyRhythm {
@@ -71,6 +74,11 @@ model WeeklyRhythm {
   text    String
   weekday Int?
   label   String?
+
+  startTime       String? // e.g. "15:00"
+  endTime         String? // e.g. "17:00"
+  joinUrl         String?
+  registrationUrl String?
 }
 
 model CalendarEntry {
@@ -79,6 +87,10 @@ model CalendarEntry {
   title       String
   description String?
   type        String   @default("special")
+
+  endDate         DateTime?
+  joinUrl         String?
+  registrationUrl String?
 }
 
 model Executive {

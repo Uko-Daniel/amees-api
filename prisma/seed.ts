@@ -135,9 +135,9 @@ async function main() {
   // 9. Sponsor Tiers
   await prisma.sponsorTier.createMany({
     data: [
-      { name: 'Bronze', price: 'Amount agreed', features: ['Logo on the site', 'Named in the report'] },
-      { name: 'Silver', price: 'Amount agreed', features: ['Booth space', 'A sponsored award'], hot: true },
-      { name: 'Gold', price: 'Amount agreed', features: ['Naming rights on one project', 'Guest slot at Tech Week'] },
+      { name: 'Bronze', price: 'Fixed amount', features: ['Logo on the site', 'Named in the report'] },
+      { name: 'Silver', price: 'Fixed amount', features: ['Booth space', 'A sponsored award'], hot: true },
+      { name: 'Gold', price: 'Fixed amount', features: ['Naming rights on one project', 'Guest slot at Tech Week'] },
     ],
   });
 
