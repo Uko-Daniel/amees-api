@@ -51,7 +51,7 @@ adminRouter.put('/settings', async (req, res) => {
 // ---------------------------------------------------------
 adminRouter.post('/calendar', async (req, res) => {
   try {
-    const { day, title, description, type, startTime, endTime, joinUrl, registrationUrl } = req.body;
+    const { day, title, description, type, startTime, endTime, venue, joinUrl, registrationUrl } = req.body;
     
     // Combine day and times into full Date objects
     const startStr = `${day}T${startTime || '12:00'}:00+01:00`;
@@ -64,6 +64,7 @@ adminRouter.post('/calendar', async (req, res) => {
         title, 
         description: description || null, 
         type: type || 'special',
+        venue: venue || null,
         joinUrl: joinUrl || null,
         registrationUrl: registrationUrl || null
       },
@@ -78,7 +79,7 @@ adminRouter.post('/calendar', async (req, res) => {
 
 adminRouter.put('/calendar/:id', async (req, res) => {
   try {
-    const { day, title, description, type, startTime, endTime, joinUrl, registrationUrl } = req.body;
+    const { day, title, description, type, startTime, endTime, venue, joinUrl, registrationUrl } = req.body;
     
     // Fetch existing to get the day if not provided
     const existing = await prisma.calendarEntry.findUnique({ where: { id: req.params.id } });
@@ -96,6 +97,7 @@ adminRouter.put('/calendar/:id', async (req, res) => {
         title, 
         description, 
         type,
+        venue: venue || null,
         joinUrl: joinUrl || null,
         registrationUrl: registrationUrl || null
       },

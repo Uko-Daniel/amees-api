@@ -75,6 +75,8 @@ model WeeklyRhythm {
   weekday Int?
   label   String?
 
+  venue String?
+
   startTime       String? // e.g. "15:00"
   endTime         String? // e.g. "17:00"
   joinUrl         String?
@@ -87,6 +89,7 @@ model CalendarEntry {
   title       String
   description String?
   type        String   @default("special")
+  venue       String?
 
   endDate         DateTime?
   joinUrl         String?
