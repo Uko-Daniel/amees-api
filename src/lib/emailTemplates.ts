@@ -494,6 +494,7 @@ function chips(rows: Detail[]): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed"><tr>${rows.slice(0, 3).map(cell).join('')}</tr></table>`;
 }
 
+
 export function buildInformalTemplate(data: InformalData): string {
   const rows = cleanDetails(data.details);
   const tag = data.statusTag ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="right"><tr><td bgcolor="${C.green}" style="border:3px solid ${C.fg};padding:5px 10px;font:700 11px/1 ${FONT};letter-spacing:.12em;text-transform:uppercase;color:${C.fg}">${esc(data.statusTag)}</td></tr></table>` : '';
