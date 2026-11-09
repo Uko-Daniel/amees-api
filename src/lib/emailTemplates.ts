@@ -34,6 +34,8 @@ export interface EmailConfig {
   logoPath: string;
   logoWidth: number;
   logoHeight: number;
+  /** Colour behind the logo. Leave empty if the logo file has its own background. */
+  logoBackground: string;
   /** Show the text wordmark next to the logo (turn off if the logo already contains it). */
   showWordmark: boolean;
   /** Where people can write when the sender is a no-reply address. */
@@ -58,6 +60,7 @@ export const config: EmailConfig = {
   logoPath: '/logo-email.svg',
   logoWidth: 40,
   logoHeight: 40,
+  logoBackground: '',
   showWordmark: true,
   supportEmail: 'info@amees.com.ng',
   noReply: true,
@@ -224,10 +227,7 @@ const ZW = '&zwnj;&nbsp;'.repeat(40);
 // ---------------------------------------------------------------
 // Shared building blocks (plain pieces, not looks)
 // ---------------------------------------------------------------
-function head(title: string, dark: { grid: boolean }): string {
-  const darkGrid = dark.grid
-    ? 'background-image:linear-gradient(#26236A 1px,transparent 1px),linear-gradient(90deg,#26236A 1px,transparent 1px)!important;'
-    : 'background-image:none!important;';
+function head(title: string): string {
   return `<!doctype html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -235,8 +235,8 @@ function head(title: string, dark: { grid: boolean }): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
+<meta name="color-scheme" content="only light">
+<meta name="supported-color-schemes" content="light">
 <title>${esc(title)}</title>
 <!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
@@ -255,26 +255,13 @@ a{color:${C.blue}}
   .full{width:100%!important}
   .eq,.eqc{height:auto!important}
 }
-@media (prefers-color-scheme:dark){
-  .bg{background-color:#130F31!important;${darkGrid}}
-  .card{background-color:#262063!important}
-  .panel{background-color:#1E1950!important}
-  .tint{background-color:#2B2A7A!important}
-  .fg,.fg a{color:#EDEAFF!important}
-  .mu{color:#A9A5D8!important}
-  .ln{border-color:#8A94F5!important}
-  .bar{background-color:#3340C9!important}
-  .btn{background-color:#4C66F0!important}
-  .lk{color:#93A8FF!important}
-  .hair{border-color:#3A3680!important}
-}
 </style>
 </head>`;
 }
 
 function page(title: string, preheader: string, inner: string, opts: { bg: string; grid: boolean }): string {
   const g = opts.grid ? GRID : '';
-  return `${head(title, { grid: opts.grid })}
+  return `${head(title)}
 <body class="bg" style="margin:0;padding:0;background-color:${opts.bg};${g}">
 <div role="article" aria-roledescription="email" lang="en">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${opts.bg}">${esc(preheader)}${ZW}</div>
@@ -294,7 +281,7 @@ const row = (inner: string, pad = '0'): string => `<tr><td style="padding:${pad}
 
 /** Logo from /public. SVG is not shown by Gmail or Outlook; point config.logoPath at a PNG if you need those. */
 function logo(h = config.logoHeight, w = config.logoWidth): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="${w}" height="${h}" bgcolor="${C.blue}" style="width:${w}px;height:${h}px;background-color:${C.blue}">` +
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="${w}" height="${h}"${config.logoBackground ? ` bgcolor="${esc(config.logoBackground)}"` : ''} style="width:${w}px;height:${h}px${config.logoBackground ? `;background-color:${esc(config.logoBackground)}` : ''}">` +
     `<img src="${esc(abs(config.logoPath))}" width="${w}" height="${h}" alt="${esc(config.name)}" style="display:block;border:0;outline:none;width:${w}px;height:${h}px;font:700 11px/${h}px ${FONT};color:#FFFFFF;text-align:center"></td></tr></table>`;
 }
 
@@ -493,7 +480,6 @@ function chips(rows: Detail[]): string {
     `<div style="margin-top:6px;font:700 20px/1.15 ${FONT};color:${C.fg}">${nl(r.value)}</div></td></tr></table>`) + `</td>`;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed"><tr>${rows.slice(0, 3).map(cell).join('')}</tr></table>`;
 }
-
 
 export function buildInformalTemplate(data: InformalData): string {
   const rows = cleanDetails(data.details);
