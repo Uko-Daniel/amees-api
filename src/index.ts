@@ -38,8 +38,8 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api', publicRouter);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin/archive-files', archiveFilesRouter);
-app.use('/api/admin', adminRouter);
 app.use('/api/admin/emails', adminEmailsRouter);
+app.use('/api/admin', adminRouter);
 
 // Mount Student Routes
 app.use('/api/student/auth', studentAuthRouter);
