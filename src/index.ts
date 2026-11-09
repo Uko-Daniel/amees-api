@@ -10,6 +10,7 @@ import { adminAuthRouter } from './routes/adminAuth.js';
 import { archiveFilesRouter } from './routes/archiveFiles.js';
 import { studentAuthRouter } from './routes/studentAuth.js';       
 import { studentWorkbenchRouter } from './routes/studentWorkbench.js'; 
+import { adminEmailsRouter } from './routes/adminEmails.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api', publicRouter);
 app.use('/api/admin/auth', adminAuthRouter);
 app.use('/api/admin/archive-files', archiveFilesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/emails', adminEmailsRouter);
 
 // Mount Student Routes
 app.use('/api/student/auth', studentAuthRouter);
