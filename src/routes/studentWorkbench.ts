@@ -30,7 +30,11 @@ studentWorkbenchRouter.get('/', async (req, res) => {
       include: { 
         project: {
           include: {
-            members: { include: { student: true } }
+            members: { 
+              include: { 
+                student: { select: { id: true, name: true, matric: true } } 
+              } 
+            }
           }
         } 
       }
@@ -55,7 +59,6 @@ studentWorkbenchRouter.post('/', async (req, res) => {
   const studentId = (req as any).studentId;
   const { project, studentName } = req.body;
   
-  // The frontend sends the raw project data, but we wrap it in workbenchData
   const wbData = project;
 
   try {
@@ -175,6 +178,7 @@ studentWorkbenchRouter.post('/join', async (req, res) => {
 
     res.json({ message: 'Joined successfully', projectId });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to join project' });
   }
 });
